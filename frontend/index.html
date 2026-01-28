@@ -7,18 +7,47 @@
     <title>PPALI 2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/ngl@2.0.0-dev.37/dist/ngl.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --sidebar-width: 380px;
+            --max-content-width: 1800px;
+            --panel-gap: 2rem;
+            --font-main: 'Outfit', sans-serif;
+        }
+
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: var(--font-main);
             background: #f8fafc;
             color: #0f172a;
         }
 
+        .layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--panel-gap);
+        }
+
+        @media (min-width: 1024px) {
+            .layout-container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+
+            .sidebar-panel {
+                flex: 0 0 var(--sidebar-width);
+                width: var(--sidebar-width);
+                min-width: 300px;
+            }
+
+            .main-panel {
+                flex: 1;
+                min-width: 0;
+            }
+        }
+
         .glass {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(0, 0, 0, 0.05);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -32,19 +61,23 @@
         }
 
         input::placeholder {
-            color: #64748b;
+            color: #94a3b8;
         }
 
         .drag-active {
-            background: rgba(99, 102, 241, 0.2) !important;
-            border-color: rgba(99, 102, 241, 0.5) !important;
+            background: rgba(99, 102, 241, 0.1) !important;
+            border-color: rgba(99, 102, 241, 0.4) !important;
+        }
+
+        .dropzone-active {
+            box-shadow: 0 0 0 2px #004EA2, 0 0 0 4px rgba(99, 102, 241, 0.2);
         }
 
         .fill-handle {
             cursor: ns-resize;
             width: 8px;
             height: 24px;
-            background: #334155;
+            background: #cbd5e1;
             border-radius: 2px;
             transition: background 0.2s, transform 0.1s;
         }
@@ -70,1105 +103,553 @@
             color: #004EA2 !important;
         }
 
-        </head><body class="min-h-screen p-8"><div class="max-w-6xl mx-auto"><header class="mb-12 text-center relative"><img id="kbsi-logo"
-        class="absolute top-0 right-0 h-12 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-        alt="KBSI Logo"><h1 class="text-5xl font-bold mb-4"><span class="gradient-text">PPALI</span><span class="custom-super">2</span></h1><p class="text-slate-600 text-lg">NMR PCA Analysis Suite 2 (Peak-Picked Data)</p></header><div class="flex flex-col gap-10 max-w-6xl mx-auto"><div class="w-full space-y-2"><section id="picked-input-section" class="glass p-6 rounded-2xl shadow-xl"><h2 class="text-xl font-semibold mb-4 flex items-center text-slate-700">Intensity Data </h2><div class="space-y-4"><div class="flex items-center justify-center w-full"><label for="dropzone-file"
-        ondragover="event.preventDefault(); this.classList.add('border-indigo-500');"
-        ondragleave="this.classList.remove('border-indigo-500');"
-        ondrop="event.preventDefault(); this.classList.remove('border-indigo-500'); handleFileUpload({target: {files: event.dataTransfer.files}});"
-        class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-lg cursor-pointer bg-white/50 hover:bg-slate-50 transition-all"><div class="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none text-center"><svg class="w-8 h-8 mb-4 text-slate-600 mx-auto" aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg" fill="none" class="text-slate-400"
-        viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-        stroke-width="2"
-        d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" /></svg><p class="mb-2 text-sm text-slate-600"><span class="font-semibold">Click to upload</span>or drag and drop</p><p class="text-xs text-slate-500 px-4">CSV,
-        XLSX (Format: Residue, H_CSP, N_CSP,
-            Intensity...)</p></div><input id="dropzone-file" type="file" class="hidden" accept=".csv, .xlsx"
-        onchange="handleFileUpload(event)" /></label></div><div class="relative"><label class="text-xs text-slate-600 block mb-2 font-bold text-center">— Or Paste Data Below —</label><textarea id="picked-data" rows="4"
-        placeholder="Format: Residue, H_CSP, N_CSP, Intensity..."
-        class="w-full bg-white border border-slate-200 rounded-lg px-3 py-3 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-500 transition-all"></textarea></div><button onclick="parsePickedData()"
-        class="w-full bg-indigo-600 hover:bg-indigo-500 text-slate-900 font-semibold py-2 text-white rounded-lg transition-colors">Parse & Analyze </button></div></section></div><div class="w-full space-y-2"><div id="results-container" class="hidden flex flex-col gap-10 mt-4"><div class="grid grid-cols-2 gap-2"><div class="glass p-6 rounded-2xl min-h-[300px]"><h2 class="text-xl font-semibold mb-4 text-slate-700">Explained Variance (%)</h2><div id="variance-plot" class="h-[250px]"></div></div><div id="pca-3d-section" class="glass p-6 rounded-2xl min-h-[400px] hidden"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold text-slate-700">3D Residue Space (PCA)</h2><button onclick="exportResultsToExcel(window.currentAnalysisData)"
-        class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md transition-colors flex items-center"><span class="mr-1">📊</span>Export to Excel </button></div><div id="pca-3d-plot" class="h-[350px]"></div></div></div><div id="loading-section" class="glass p-6 rounded-2xl hidden"><h2 class="text-xl font-semibold mb-4 text-slate-700">Feature Contributions (PCA Loadings) </h2><div id="loading-plots" class="grid grid-cols-3 gap-2"></div></div><div id="outlier-section" class="glass p-6 rounded-2xl hidden top-6"><h2 class="text-xl font-semibold mb-4 text-black-600">Outlier Residues (P-value < 0.05)</h2><div class="overflow-x-auto"><table class="w-full text-sm text-left text-slate-700"><thead class="text-xs text-slate-600 bg-slate-50/50"><tr><th class="px-4 py-3">Residue No.</th><th class="px-4 py-3 text-center">PC1</th><th class="px-4 py-3 text-center">PC2</th><th class="px-4 py-3 text-center">PC3</th><th class="px-4 py-3 text-center">Mahalanobis</th><th class="px-4 py-3 text-center">p-Value</th></tr></thead><tbody id="outlier-table-body"></tbody></table></div></div><div id="pdb-section" class="glass p-6 rounded-2xl hidden mt-6"><h2 class="text-xl font-semibold mb-4 text-slate-700">Protein Structure (Outlier Mapping)</h2><div class="grid grid-cols-1 lg:grid-cols-4 gap-6"><div class="lg:col-span-1 space-y-4"><label for="pdb-file-input"
-        class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all"
-        ondragover="event.preventDefault(); this.classList.add('border-indigo-500');"
-        ondragleave="this.classList.remove('border-indigo-500');"
-        ondrop="handlePDBDrop(event)"><div class="flex flex-col items-center justify-center pt-5 pb-6 text-center pointer-events-none"><span class="text-3xl mb-2">🧬</span><p class="mb-2 text-sm text-slate-500"><span class="font-semibold">Upload PDB</span></p><p class="text-xs text-slate-400">Drag & Drop or Click</p></div><input id="pdb-file-input" type="file" class="hidden" accept=".pdb,.cif,.ent"
-        onchange="handlePDBUpload(event)" /></label><div id="pdb-file-name" class="text-xs text-center text-indigo-600 font-medium h-4"></div><div class="text-xs text-slate-500 bg-slate-100 p-3 rounded-lg"><p class="font-semibold mb-1">Color Legend:</p><div class="flex items-center mb-1"><span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>Outliers (Red)</div><div class="flex items-center"><span class="w-3 h-3 bg-gray-300 rounded-full mr-2"></span>Others (Gray)</div></div></div><div class="lg:col-span-3 flex flex-col space-y-2"><div class="flex justify-end space-x-2"><button onclick="handleToolbar('reset')"
-        class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs transition-colors">Reset View</button><button onclick="handleToolbar('spin')"
-        class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs transition-colors">Spin</button><button onclick="handleToolbar('screenshot')"
-        class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs transition-colors">📸</button></div><div class="h-[400px] bg-white rounded-xl border border-slate-200 relative overflow-hidden"
-        id="ngl-viewport"><div id="pdb-placeholder"
-        class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-10 bg-white"><span class="text-4xl mb-4"></span><p class="text-lg font-semibold">Load PDB to view structure</p><p class="text-xs text-slate-500 mt-2">NGL Viewer Ready</p></div></div></div></div></div><div id="kd-plots" class="grid grid-cols-1 lg:grid-cols-3 gap-6"></div></div></div></div></div><script>const API_BASE=window.location.protocol==='file:' ? 'http://127.0.0.1:8000' : '';
-        const logoImg=document.getElementById('kbsi-logo');
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
 
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-8 bg-slate-50">
+    <div class="w-full px-48">
+        <header class="mb-12 text-center relative px-4">
+            <img id="kbsi-logo"
+                class="absolute top-0 right-0 h-12 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                alt="KBSI Logo">
+            <h1 class="text-5xl font-bold mb-4">
+                <span class="gradient-text">PPALI</span><span class="custom-super">2</span>
+            </h1>
+            <p class="text-slate-600 text-lg">Peak-based PCA Analysis for Ligand Interactions 2</p>
+        </header>
+        <main class="w-full px-1 py-8 relative z-10">
+            <div class="flex flex-col gap-10">
+                <div class="grid grid-cols-4 gap-6 h-[400px]">
+                    <div id="panel-dir-scan"
+                        class="col-span-1 glass p-6 rounded-2xl flex flex-col h-full border border-white/20">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center text-slate-700 flex-none">
+                            Directory Scan
+                        </h2>
+                        <div
+                            class="flex space-x-4 bg-slate-100 p-2 rounded-lg inline-flex border border-slate-200 mb-4 self-start flex-none">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="scanDim" value="1D"
+                                    class="form-radio text-indigo-500 bg-white border-slate-300 focus:ring-indigo-500">
+                                <span class="ml-2 text-sm text-slate-600">1D</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="scanDim" value="2D"
+                                    class="form-radio text-indigo-500 bg-white border-slate-300 focus:ring-indigo-500"
+                                    checked>
+                                <span class="ml-2 text-sm text-slate-600">2D</span>
+                            </label>
+                        </div>
+                        <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
+                            <div id="drop-zone"
+                                class="border-2 border-dashed border-slate-300 rounded-xl flex-1 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100/50 transition-all cursor-pointer group min-h-[120px]"
+                                ondragover="this.classList.add('border-indigo-500', 'bg-indigo-50'); event.preventDefault();"
+                                ondragleave="this.classList.remove('border-indigo-500', 'bg-indigo-50');"
+                                ondrop="handleDirDrop(event, this)">
+                                <div
+                                    class="mb-2 p-2 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                                    <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <p class="text-xs text-slate-600 font-medium mb-1 text-center">Drag Folder Here</p>
+                                <input id="dir-path" type="text" placeholder="/path/to/data"
+                                    class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 placeholder-slate-400 text-center"
+                                    onclick="event.stopPropagation()">
+                            </div>
+                            <button onclick="scanDirectory()"
+                                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg transition-colors shadow-lg shadow-indigo-200 text-sm flex-none">
+                                Scan & Add
+                            </button>
+                        </div>
+                    </div>
+                    <div id="spectra-card-1d"
+                        class="hidden col-span-3 glass p-6 rounded-2xl flex flex-col h-full border border-white/20">
+                        <h3 class="text-lg font-bold mb-4 text-slate-700 flex-none">Input Spectra Check</h3>
+                        <div id="spectra-plot-1d"
+                            class="w-full flex-1 min-h-0 bg-slate-50/50 rounded-xl border border-slate-100">
+                            <div class="h-full flex items-center justify-center text-slate-400 text-sm">
+                                Scanning data will display spectra here.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="bottom-row" class="hidden grid grid-cols-4 gap-6 items-start mt-4">
+                    <div id="panel-config"
+                        class="col-span-1 glass p-6 rounded-2xl flex flex-col space-y-4 border border-white/20">
+                        <div class="flex justify-between items-center mb-2 flex-none">
+                            <h2 class="text-xl font-semibold text-slate-700">Analysis Config</h2>
+                            <button onclick="toggleSelectAll()" id="btn-select-all"
+                                class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded transition-colors hidden">Select
+                                All</button>
+                        </div>
+                        <div id="exp-list"
+                            class="space-y-2 max-h-60 overflow-y-auto pr-1 hidden custom-scrollbar bg-white/40 p-2 rounded-lg border border-slate-100">
+                        </div>
+                        <div id="exp-list-placeholder"
+                            class="text-center py-6 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl text-sm">
+                            No experiments loaded.
+                        </div>
+                        <div class="space-y-4 pt-2">
+                            <div>
+                                <label class="text-xs text-slate-500 block mb-1 font-bold">Protein Conc
+                                    (μM)</label>
+                                <input id="protein-conc" type="number" value="50"
+                                    class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 block mb-1 font-bold">Batch
+                                    Concentrations</label>
+                                <div class="space-y-2">
+                                    <textarea id="batch-concs" rows="2" placeholder="Paste: 10, 20, 30..."
+                                        class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono shadow-sm resize-none"></textarea>
+                                    <button onclick="applyBatchConcs()"
+                                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs px-3 py-1 rounded-lg border border-slate-300 transition-colors">
+                                        Apply Batch
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-xs text-slate-500 mb-1 block">Start PPM</label>
+                                    <input type="number" id="ppm-start" step="0.1"
+                                        class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-500 mb-1 block">End PPM</label>
+                                    <input type="number" id="ppm-end" step="0.1"
+                                        class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm">
+                                </div>
+                            </div>
+                            <div class="flex items-center pt-1">
+                                <input type="checkbox" id="no-fitting" class="w-4 h-4 text-indigo-600 rounded">
+                                <label for="no-fitting" class="ml-2 text-sm text-slate-600">Skip Fitting</label>
+                            </div>
+                            <button onclick="runAnalysis()"
+                                class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 mt-2">
+                                Run Analysis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+    <script>
+        const API_BASE = window.location.protocol === 'file:' ? 'http://127.0.0.1:7777' : '';
+        const logoImg = document.getElementById('kbsi-logo');
         if (logoImg) {
-            logoImg.src=`$ {
-                API_BASE
-            }
-
-            /logo`;
-            logoImg.onerror=()=> {
+            logoImg.src = `${API_BASE}/logo`;
+            logoImg.onerror = () => {
                 console.warn("KBSI Logo failed to load (Backend might be offline or /logo missing)");
-                logoImg.style.display='none';
-            }
-
-            ;
+                logoImg.style.display = 'none';
+            };
         }
-
-        function handleFileUpload(e) {
-            const file=e.target.files[0];
-            if ( !file) return;
-            const reader=new FileReader();
-
-            reader.onload=function (e) {
-                const data=new Uint8Array(e.target.result);
-
-                try {
-                    const workbook=XLSX.read(data, {
-                        type: 'array'
-                    });
-                const firstSheet=workbook.Sheets[workbook.SheetNames[0]];
-                const csv=XLSX.utils.sheet_to_csv(firstSheet);
-                document.getElementById('picked-data').value=csv;
-                parsePickedData();
+        let experiments = [];
+        let allSelected = false;
+        function toggleSelectAll() {
+            allSelected = !allSelected;
+            const checkboxes = document.querySelectorAll('.exp-checkbox');
+            checkboxes.forEach(cb => cb.checked = allSelected);
+            document.getElementById('btn-select-all').innerText = allSelected ? 'Deselect All' : 'Select All';
+        }
+        function handleDirDrop(event, el) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (el) el.classList.remove('dropzone-active');
+            if (el) el.classList.remove('ring-2', 'ring-indigo-500', 'ring-teal-500');
+            const dt = event.dataTransfer;
+            console.log("Drag Types Available:", dt.types);
+            let path = "";
+            if (dt.files && dt.files.length > 0) {
+                const f = dt.files[0];
+                if (f.path) {
+                    path = f.path;
+                    console.log("Detected via File.path:", path);
+                }
             }
-
-            catch (err) {
-                alert('Error parsing file: ' + err.message);
+            if (!path) {
+                const uriList = dt.getData('text/uri-list');
+                if (uriList) {
+                    path = uriList.split(/[\r\n]+/)[0];
+                    console.log("Detected via text/uri-list:", path);
+                }
+            }
+            if (!path) {
+                const mozUrl = dt.getData('text/x-moz-url');
+                if (mozUrl) {
+                    path = mozUrl.split(/[\r\n]+/)[0];
+                    console.log("Detected via text/x-moz-url:", path);
+                }
+            }
+            if (!path) {
+                path = dt.getData('text/plain');
+                if (path) console.log("Detected via text/plain:", path);
+            }
+            if (path) {
+                path = path.trim();
+                if (path.startsWith('file://')) {
+                    path = path.replace(/^file:\/\/(localhost)?/, '');
+                    path = decodeURIComponent(path);
+                }
+                path = path.split(/[\r\n]+/)[0].replace(/\/$/, '').trim();
+                document.getElementById('dir-path').value = path;
+                console.log("Final set path:", path);
+            } else {
+                console.error("Drag dropped but no path detected in any format.");
+                alert("Browser Security Warning: Standard browsers (Chrome/Firefox) often block access to absolute folder paths via drag-and-drop for security reasons.\n\nTip: You can usually copy-paste the path directly into the input field above.");
             }
         }
-
-        ;
-        reader.readAsArrayBuffer(file);
+        async function scanDirectory() {
+            const path = document.getElementById('dir-path').value;
+            if (!path) return alert('Please enter a path');
+            const dim = document.querySelector('input[name="scanDim"]:checked').value;
+            console.log(`Scanning directory: ${path} for ${dim} data...`);
+            const formData = new FormData();
+            formData.append('path', path);
+            formData.append('dim', dim);
+            try {
+                const response = await fetch(`${API_BASE}/scan`, { method: 'POST', body: formData });
+                const data = await response.json();
+                console.log("Scan Response:", data);
+                if (!response.ok) throw new Error(data.detail || 'Scan failed');
+                experiments = data.experiments || [];
+                console.log(`Found ${experiments.length} experiments`);
+                renderExperimentList();
+                document.getElementById('spectra-card-1d').classList.remove('hidden');
+                document.getElementById('bottom-row').classList.remove('hidden');
+                if (experiments.length === 0) {
+                    alert("No valid Bruker experiments (1r/2rr) found in that directory.");
+                }
+            } catch (err) {
+                console.error("Scan Error:", err);
+                document.getElementById('btn-select-all').classList.add('hidden');
+                alert('Scan failed: ' + err.message);
+            }
         }
-
+        function renderExperimentList() {
+            const container = document.getElementById('exp-list');
+            const placeholder = document.getElementById('exp-list-placeholder');
+            if (experiments && experiments.length > 0) {
+                container.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                document.getElementById('btn-select-all').classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                document.getElementById('btn-select-all').classList.add('hidden');
+            }
+            document.getElementById('btn-select-all').classList.add('hidden');
+            experiments.forEach((exp, idx) => {
+                const div = document.createElement('div');
+                div.className = 'exp-row flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200';
+                div.id = `exp-row-${idx}`;
+                div.innerHTML = `
+                    <input type="checkbox" class="exp-checkbox h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" id="check-${idx}">
+                    <span class="text-xs flex-1 truncate text-slate-600 font-medium py-1" title="${exp.path}">${exp.name}</span>
+                    <div class="flex items-center space-x-1">
+                        <input type="number" value="0" step="1" id="conc-${idx}" 
+                            class="exp-conc w-16 bg-white text-xs px-2 py-1 rounded border border-slate-300 focus:border-indigo-500 outline-none transition-all text-center">
+                        <div class="fill-handle" onmousedown="startFillDrag(event, ${idx})"></div>
+                    </div>
+                `;
+                div.onmousedown = (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.classList.contains('fill-handle')) return;
+                    startDragSelection(idx);
+                };
+                div.onmouseenter = () => {
+                    if (isDraggingSelection) continueDragSelection(idx);
+                    if (isFilling) continueFillDrag(idx);
+                };
+                container.appendChild(div);
+            });
+        }
+        async function runAnalysis() {
+            const paths = [];
+            const concs = [];
+            experiments.forEach((exp, idx) => {
+                const cb = document.getElementById(`check-${idx}`);
+                if (cb.checked) {
+                    paths.push(exp.path);
+                    concs.push(parseFloat(document.getElementById(`conc-${idx}`).value) || 0);
+                }
+            });
+            if (paths.length < 2) return alert('Select at least 2 experiments');
+            const formData = new FormData();
+            paths.forEach(p => formData.append('paths', p));
+            concs.forEach(c => formData.append('concs', c));
+            formData.append('protein_conc', document.getElementById('protein-conc').value);
+            formData.append('regime', 'Fast'); // Hardcoded to Fast per user request (labeled as Relax)
+            const ppmStart = document.getElementById('ppm-start').value;
+            const ppmEnd = document.getElementById('ppm-end').value;
+            if (ppmStart && ppmEnd) {
+                formData.append('ppm_start', ppmStart);
+                formData.append('ppm_end', ppmEnd);
+            }
+            const noFitting = document.getElementById('no-fitting').checked;
+            formData.append('no_fitting', noFitting);
+            try {
+                const response = await fetch(`${API_BASE}/analyze`, { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Analysis failed');
+                displayResults(data);
+            } catch (err) {
+                alert('Analysis failed: ' + err.message);
+            }
+        }
+        function displayResults(data) {
+            if (data.error) return alert(data.error);
+            if (data.result_h && data.result_h.spectra_check) {
+                renderSpectraCheck(data.result_h.spectra_check, 'spectra-plot-1d', data.concentrations);
+            }
+            render3WayComparison(data);
+        }
+        function render3WayComparison(data) {
+            const container = document.getElementById('bottom-row');
+            console.log("3-Way Analysis Data Received:", data);
+            const children = Array.from(container.children);
+            children.forEach(child => {
+                if (child.id !== 'panel-config') {
+                    child.remove();
+                }
+            });
+            if (data.result_2d) {
+                console.log("Adding HSQC PCA Column");
+                container.appendChild(createColumn('HSQC PCA', data.result_2d, data.concentrations));
+            }
+            if (data.result_h) {
+                console.log("Adding 1H Projection Column");
+                container.appendChild(createColumn('1H Projection', data.result_h, data.concentrations));
+            }
+            if (data.result_n) {
+                console.log("Adding 15N Projection Column");
+                container.appendChild(createColumn('15N Projection', data.result_n, data.concentrations));
+            }
+        }
+        function createColumn(title, result, sortedConcs) {
+            const col = document.createElement('div');
+            col.className = 'glass p-6 rounded-2xl flex flex-col space-y-4 border border-white/20 result-col h-full';
+            col.innerHTML = `<h3 class="text-lg font-bold text-center text-slate-700">${title}</h3>`;
+            if (!result || !result.success) {
+                col.innerHTML += `<div class="text-rose-500 text-center text-sm py-4">Analysis Failed</div>`;
+                return col;
+            }
+            ['pc1', 'pc2'].forEach((pc, idx) => {
+                const plotId = `plot-${title.replace(/\s+/g, '')}-${pc}`;
+                const scores = idx === 0 ? result.scores : result[`${pc}_scores`];
+                const fit = result[`${pc}_fit`];
+                const variance = result.variance[idx];
+                const div = document.createElement('div');
+                div.className = 'w-full h-48 border-t border-slate-200/50 pt-2 flex-1 min-h-[200px]'; // Ensure height
+                div.id = plotId;
+                col.appendChild(div);
+                col.appendChild(createStatsDiv(pc.toUpperCase(), fit, variance));
+                setTimeout(() => {
+                    const xVals = sortedConcs ? sortedConcs : getActiveConcs();
+                    plotFit(plotId, xVals, scores, fit, `${pc.toUpperCase()} (${(variance * 100).toFixed(1)}%)`, '#004EA2');
+                }, 0);
+            });
+            return col;
+        }
+        function renderSpectraCheck(checkData, domId = 'spectra-plot', concs = []) {
+            const ppm = checkData.ppm;
+            const allSpectra = checkData.all_spectra;
+            if (!allSpectra || allSpectra.length === 0) return;
+            const traces = [];
+            const n = allSpectra.length;
+            for (let i = 0; i < n; i++) {
+                const hue = 240 - (240 * i / (n > 1 ? n - 1 : 1));
+                traces.push({
+                    x: ppm,
+                    y: allSpectra[i],
+                    mode: 'lines',
+                    name: concs[i] !== undefined ? `${concs[i]} uM` : `Spec ${i + 1}`,
+                    line: {
+                        color: `hsla(${hue}, 70%, 50%, 0.6)`,
+                        width: 1.5
+                    },
+                    hoverinfo: 'name+y'
+                });
+            }
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#94a3b8', size: 10 },
+                xaxis: {
+                    title: 'PPM',
+                    autorange: 'reversed',
+                    gridcolor: '#e2e8f080'
+                },
+                yaxis: {
+                    title: 'Intensity',
+                    gridcolor: '#e2e8f080'
+                },
+                margin: { t: 20, r: 20, b: 40, l: 60 },
+                showlegend: false,
+                hovermode: 'closest'
+            };
+            Plotly.newPlot(domId, traces, layout);
+        }
+        function getActiveConcs() {
+            const vals = [];
+            experiments.forEach((exp, idx) => {
+                if (document.getElementById(`check-${idx}`).checked) {
+                    vals.push(parseFloat(document.getElementById(`conc-${idx}`).value) || 0);
+                }
+            });
+            return vals;
+        }
+        function createStatsDiv(label, fit, variance) {
+            const div = document.createElement('div');
+            div.className = 'bg-slate-50 rounded p-2 text-[10px] space-y-1 mb-2';
+            const uFit = fit && fit.universal;
+            const tFit = fit && fit.traditional;
+            if (!uFit || !uFit.success) {
+                if (!tFit || !tFit.success || tFit.error === "Fitting skipped by user") {
+                    div.innerHTML = `<div class="font-bold text-slate-600">${label} (${(variance * 100).toFixed(1)}%)</div><div>No Fitting</div>`;
+                    return div;
+                }
+            }
+            const activeFit = (uFit && uFit.success) ? uFit : tFit;
+            const fitType = (uFit && uFit.success) ? (uFit.regime || "Univ") : "Trad";
+            let tradHtml = '';
+            if (tFit && tFit.success && tFit.error !== "Fitting skipped by user") {
+                tradHtml = `<div class="flex justify-between text-emerald-700 font-bold">
+                                <span>Trad</span>
+                                <span>Kd: ${tFit.kd.toFixed(1)} ± ${tFit.kd_err.toFixed(1)}</span>
+                            </div>`;
+            } else {
+                tradHtml = `<div class="flex justify-between text-slate-400"><span>Trad</span><span>Failed</span></div>`;
+            }
+            let relaxHtml = '';
+            if (uFit && uFit.success) {
+                relaxHtml = `<div class="flex justify-between text-slate-500">
+                                <span>Relax</span>
+                                <span>Kd: ${uFit.kd.toFixed(1)} ± ${uFit.kd_err.toFixed(1)}</span>
+                            </div>`;
+            } else {
+                relaxHtml = `<div class="flex justify-between text-slate-400"><span>Relax</span><span>Failed</span></div>`;
+            }
+            div.innerHTML = `
+                <div class="flex justify-between font-bold text-slate-700 border-b border-slate-200 pb-1 mb-1">
+                    <span>${label}</span>
+                    <span class="text-indigo-500">Var: ${(variance * 100).toFixed(1)}%</span>
+                </div>
+                ${tradHtml}
+                ${relaxHtml}
+            `;
+            return div;
+        }
+        function plotFit(domId, xData, yData, fit, title, color) {
+            const traceData = {
+                x: xData, y: yData, mode: 'markers',
+                marker: { color: color, size: 8, line: { color: 'white', width: 1 } }, name: 'Data'
+            };
+            const traces = [traceData];
+            if (fit && fit.traditional && fit.traditional.success && fit.traditional.fit_x) {
+                traces.push({
+                    x: fit.traditional.fit_x, y: fit.traditional.fit_y, mode: 'lines',
+                    line: { color: '#10b981', width: 2, dash: 'solid' }, name: 'Trad'
+                });
+            }
+            if (fit && fit.universal && fit.universal.success && fit.universal.fit_x) {
+                traces.push({
+                    x: fit.universal.fit_x, y: fit.universal.fit_y, mode: 'lines',
+                    line: { color: '#94a3b8', width: 2, dash: 'dash' }, name: 'Relax'
+                });
+            }
+            const layout = {
+                title: { text: title, font: { size: 12, color: '#475569' } },
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#64748b', size: 10 },
+                xaxis: { title: 'Conc (uM)' },
+                yaxis: { title: 'Score' },
+                margin: { t: 25, b: 25, l: 30, r: 10 },
+                showlegend: false
+            };
+            Plotly.newPlot(domId, traces, layout);
+        }
+        let isDraggingSelection = false;
+        let dragStartState = true;
+        let isFilling = false;
+        let fillSourceValue = 0;
+        let fillStartIndex = -1;
+        function startDragSelection(idx) {
+            isDraggingSelection = true;
+            const cb = document.getElementById(`check-${idx}`);
+            dragStartState = !cb.checked;
+            cb.checked = dragStartState;
+            document.getElementById(`exp-row-${idx}`).classList.add('drag-active');
+            document.addEventListener('mouseup', stopDrags, { once: true });
+        }
+        function continueDragSelection(idx) {
+            document.getElementById(`check-${idx}`).checked = dragStartState;
+            document.getElementById(`exp-row-${idx}`).classList.add('drag-active');
+        }
+        function startFillDrag(e, idx) {
+            e.preventDefault(); e.stopPropagation();
+            isFilling = true; fillStartIndex = idx;
+            fillSourceValue = document.getElementById(`conc-${idx}`).value;
+            document.getElementById(`exp-row-${idx}`).classList.add('drag-active');
+            document.addEventListener('mouseup', stopDrags, { once: true });
+        }
+        function continueFillDrag(idx) {
+            document.getElementById(`conc-${idx}`).value = fillSourceValue;
+            document.getElementById(`check-${idx}`).checked = true;
+            const start = Math.min(fillStartIndex, idx);
+            const end = Math.max(fillStartIndex, idx);
+            document.querySelectorAll('.exp-row').forEach((row, i) => {
+                if (i >= start && i <= end) row.classList.add('drag-active');
+                else if (!isDraggingSelection) row.classList.remove('drag-active');
+            });
+        }
+        function stopDrags() {
+            isDraggingSelection = false; isFilling = false; fillStartIndex = -1;
+            document.querySelectorAll('.exp-row').forEach(row => row.classList.remove('drag-active'));
+        }
+        function toggleAll(val) {
+            document.querySelectorAll('.exp-checkbox').forEach(cb => cb.checked = val);
+        }
         function handleDrop(e) {
             e.preventDefault();
-            const file=e.dataTransfer.files[0];
-
+            const file = e.dataTransfer.files[0];
             if (file) {
-                const reader=new FileReader();
-
-                reader.onload=(event)=> {
-                    document.getElementById('batch-concs').value=event.target.result;
-                }
-
-                ;
+                const reader = new FileReader();
+                reader.onload = (ev) => document.getElementById('batch-concs').value = ev.target.result;
                 reader.readAsText(file);
             }
         }
-
         function applyBatchConcs() {
-            const raw=document.getElementById('batch-concs').value;
-            const values=raw.split(/[\s, ]+/).filter(v=> v !=='').map(v=> parseFloat(v));
-            if (values.length===0) return alert("No valid numbers found in input.");
-            let valIdx=0;
-
-            experiments.forEach((exp, idx)=> {
-                    const cb=document.getElementById(`check-$ {
-                            idx
-                        }
-
-                        `);
-
-                    const input=document.getElementById(`conc-$ {
-                            idx
-                        }
-
-                        `);
-
-                    if (valIdx < values.length) {
-                        input.value=values[valIdx++];
-                        cb.checked=true;
-
-                        const row=document.getElementById(`exp-row-$ {
-                                idx
-                            }
-
-                            `);
-                        row.classList.add('bg-indigo-900/30');
-                        setTimeout(()=> row.classList.remove('bg-indigo-900/30'), 500);
-                    }
-                });
-        }
-
-        function parsePickedData() {
-            const text=document.getElementById('picked-data').value.trim();
-            if ( !text) return alert('Please enter data');
-            const lines=text.split('\n').filter(l=> l.trim() !=='');
-            runPickedAnalysis(lines);
-        }
-
-        async function runPickedAnalysis(lines) {
-            const formData=new FormData();
-
-            lines.forEach(line=> {
-                    formData.append('intensities', line.trim());
-                });
-
-            try {
-                const response=await fetch(`$ {
-                        API_BASE
-                    }
-
-                    /analyze_picked`, {
-                    method: 'POST',
-                    body: formData
-                });
-            const data=await response.json();
-            if ( !response.ok) throw new Error(data.detail || 'Analysis failed');
-            displayResults(data);
-        }
-
-        catch (err) {
-            alert('Analysis failed: ' + err.message);
-        }
-        }
-
-        function displayResults(data) {
-            if ( !data || ( !data.results && !data.result_2d && !data.result_h)) {
-                alert('Analysis failed: Server returned invalid data');
-                return;
-            }
-
-            if (document.getElementById('placeholder')) {
-                document.getElementById('placeholder').classList.add('hidden');
-            }
-
-            document.getElementById('results-container').classList.remove('hidden');
-
-            if (data.result_2d || data.result_h || data.result_n) {
-                document.getElementById('pca-3d-section').classList.add('hidden');
-                document.getElementById('outlier-section').classList.add('hidden');
-                document.getElementById('loading-section').classList.add('hidden');
-                renderKdFits(data);
-                return;
-            }
-
-            const variancePlot=document.getElementById('variance-plot');
-
-            if (variancePlot) {
-                const topRow=variancePlot.closest('.grid');
-                if (topRow) topRow.classList.remove('hidden');
-            }
-
-            document.getElementById('variance-plot').parentElement.classList.remove('hidden');
-            renderVariance(data);
-
-            if (data.residue_nos) {
-                document.getElementById('pca-3d-section').classList.remove('hidden');
-                document.getElementById('outlier-section').classList.remove('hidden');
-                document.getElementById('loading-section').classList.remove('hidden');
-                render3DPCA(data);
-                renderOutlierTable(data);
-                renderLoadings(data);
-            }
-
-            else {
-                document.getElementById('pca-3d-section').classList.add('hidden');
-                document.getElementById('outlier-section').classList.add('hidden');
-                document.getElementById('loading-section').classList.add('hidden');
-            }
-
-            renderKdFits(data);
-            window.currentAnalysisData=data;
-        }
-
-        function exportResultsToExcel(data) {
-            if ( !data) return alert("No analysis data available to export.");
-            const wb=XLSX.utils.book_new();
-
-            const scoresData=data.residue_nos.map((resNo, idx)=> {
-                    const s1=data.results[0].scores[idx];
-                    const s2=data.results[1]?.scores[idx] || 0;
-                    const s3=data.results[2]?.scores[idx] || 0;
-                    const m=data.mahalanobis_dist ? data.mahalanobis_dist[idx] : null;
-                    const p=data.p_values ? data.p_values[idx] : null;
-                    const isOutlier=p !==null && p < 0.05 ? "Yes" : "No";
-
-                    return {
-                        "Residue No": resNo,
-                        "PC1 Score": s1,
-                        "PC2 Score": s2,
-                        "PC3 Score": s3,
-                        "Mahalanobis Dist": m,
-                        "P-value": p,
-                        "Outlier (P<0.05)": isOutlier
-                    }
-
-                    ;
-                });
-            const wsScores=XLSX.utils.json_to_sheet(scoresData);
-            XLSX.utils.book_append_sheet(wb, wsScores, "Scores & Outliers");
-
-            if (data.feature_names) {
-                const loadingsData=data.feature_names.map(feat=> {
-                        const row= {
-                            "Feature": feat
-                        }
-
-                        ;
-
-                        data.results.forEach(res=> {
-                                if (res.pc_index <=3) {
-                                    row[`PC$ {
-                                        res.pc_index
-                                    }
-
-                                    Loading`]=res.loadings[feat];
-                                }
-                            });
-                        return row;
-                    });
-                const wsLoadings=XLSX.utils.json_to_sheet(loadingsData);
-                XLSX.utils.book_append_sheet(wb, wsLoadings, "Loadings");
-            }
-
-            const varianceData=data.variance_ratio.map((v, i)=> ({
-                    "PC Index": i + 1,
-                    "Explained Variance": v,
-                    "Cumulative Variance": data.variance_ratio.slice(0, i + 1).reduce((a, b)=> a + b, 0)
-                }));
-        const wsVar=XLSX.utils.json_to_sheet(varianceData);
-        XLSX.utils.book_append_sheet(wb, wsVar, "Variance");
-        XLSX.writeFile(wb, "PPALI_PCA_Results.xlsx");
-        }
-
-        function renderOutlierTable(data) {
-            const body=document.getElementById('outlier-table-body');
-            body.innerHTML='';
-            const EUCLIDEAN_THRESHOLD=3.0;
-            const P_VALUE_THRESHOLD=0.05;
-            currentOutliers=[];
-            const hasStats=data.mahalanobis_dist && data.p_values;
-
-            data.residue_nos.forEach((resNo, idx)=> {
-                    const s1=data.results[0].scores[idx];
-                    const s2=data.results[1]?.scores[idx] || 0;
-                    const s3=data.results[2]?.scores[idx] || 0;
-                    const dist=Math.sqrt(s1 * s1 + s2 * s2 + s3 * s3);
-                    let isOutlier=false;
-                    let reason=[];
-                    let pValStr="-";
-                    let mahaStr="-";
-
-                    if (hasStats) {
-                        const p=data.p_values[idx];
-                        const m=data.mahalanobis_dist[idx];
-                        pValStr=p.toExponential(2);
-                        mahaStr=m.toFixed(2);
-
-                        if (p < P_VALUE_THRESHOLD) {
-                            isOutlier=true;
-
-                            reason.push(`P < $ {
-                                    P_VALUE_THRESHOLD
-                                }
-
-                                `);
-                        }
-                    }
-
-                    if (isOutlier) {
-                        currentOutliers.push(resNo);
-                        const tr=document.createElement('tr');
-                        tr.className='border-b border-slate-200/50 hover:bg-slate-50/30 transition-colors';
-
-                        tr.innerHTML=` <td class="px-4 py-3 font-semibold text-sky-600" >Res $ {
-                            resNo
-                        }
-
-                        </td> <td class="px-4 py-3 text-center ${Math.abs(s1) > 1.5 ? 'text-rose-600' : ''}" >$ {
-                            s1.toFixed(2)
-                        }
-
-                        </td> <td class="px-4 py-3 text-center ${Math.abs(s2) > 1.5 ? 'text-rose-600' : ''}" >$ {
-                            s2.toFixed(2)
-                        }
-
-                        </td> <td class="px-4 py-3 text-center ${Math.abs(s3) > 1.5 ? 'text-rose-600' : ''}" >$ {
-                            s3.toFixed(2)
-                        }
-
-                        </td> <td class="px-4 py-3 text-center font-mono text-xs text-indigo-600" >$ {
-                            mahaStr
-                        }
-
-                        </td> <td class="px-4 py-3 text-center font-mono text-xs ${hasStats && data.p_values[idx] < P_VALUE_THRESHOLD ? 'text-red-600 font-bold' : 'text-slate-500'}" >$ {
-                            pValStr
-                        }
-
-                        </td> `;
-                        body.appendChild(tr);
-                    }
-                });
-
-            if (body.innerHTML==='') {
-                body.innerHTML='<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 italic">No significant outliers detected (P < 0.05)</td></tr>';
-            }
-
-            if (stage && stage.compList.length > 0) {
-                applyOutlierColoring(stage.compList[0]);
-            }
-        }
-
-        function renderLoadings(data) {
-            const container=document.getElementById('loading-plots');
-            container.innerHTML='';
-
-            data.results.forEach(res=> {
-                    if (res.pc_index > 3) return; // Show only PC1-3
-                    const div=document.createElement('div');
-                    div.className='glass p-4 rounded-xl';
-                    const plotDiv=document.createElement('div');
-
-                    plotDiv.id=`loading-plot-pc$ {
-                        res.pc_index
-                    }
-
-                    `;
-                    plotDiv.style.height='250px';
-                    div.appendChild(plotDiv);
-                    container.appendChild(div);
-                    const xValues=Object.keys(res.loadings);
-                    const yValues=Object.values(res.loadings);
-
-                    const combined=xValues.map((name, i)=> ({
-                            name, val: yValues[i], abs: Math.abs(yValues[i])
-                        }));
-                combined.sort((a, b)=> b.abs - a.abs);
-
-                const trace= {
-
-                    x: combined.map(c=> c.name),
-                    y: combined.map(c=> c.val),
-                    type: 'bar',
-                    marker: {
-                        color: combined.map(c=> c.val >=0 ? '#38bdf8' : '#fb7185')
-                    }
-                }
-
-                ;
-
-                const layout= {
-                    title: `PC$ {
-                        res.pc_index
-                    }
-
-                    Feature Contributions`,
-                    paper_bgcolor: 'rgba(0,0,0,0)',
-                    plot_bgcolor: 'rgba(0,0,0,0)',
-                    margin: {
-                        t: 30, b: 40, l: 40, r: 10
-                    }
-
-                    ,
-                    font: {
-                        color: '#94a3b8', size: 10
-                    }
-
-                    ,
-                    xaxis: {
-                        title: 'Column Name', automargin: true
-                    }
-
-                    ,
-                    yaxis: {
-                        title: 'Contribution Weight', automargin: true
-                    }
-                }
-
-                ;
-                Plotly.newPlot(plotDiv.id, [trace], layout);
-            });
-        }
-
-        function renderVariance(data) {
-            const labels=data.results.map(r=> `PC$ {
-                    r.pc_index
-                }
-
-                `);
-            const values=data.variance_ratio.map(v=> v * 100);
-
-            const traces=[ {
-
-                x: labels,
-                y: values,
-                type: 'bar',
-                marker: {
-
-                    color: ['#38bdf8',
-                    '#818cf8',
-                    '#a855f7'],
-                    line: {
-                        color: 'white', width: 1
-                    }
-                }
-
-                ,
-                text: values.map(v=> `$ {
-                        v.toFixed(1)
-                    }
-
-                    %`),
-                textposition: 'auto',
-            }
-
-            ];
-
-            const layout= {
-
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: {
-                    color: '#94a3b8', size: 10
-                }
-
-                ,
-                xaxis: {
-                    title: 'Component', gridcolor: '#334155'
-                }
-
-                ,
-                yaxis: {
-                    title: 'Variance (%)', gridcolor: '#334155', range: [0, 100]
-                }
-
-                ,
-                margin: {
-                    t: 10, b: 30, l: 40, r: 10
-                }
-
-                ,
-                height: 250
-            }
-
-            ;
-            Plotly.newPlot('variance-plot', traces, layout);
-        }
-
-        function render3DPCA(data) {
-            if (data.results.length < 3) return;
-            const threshold=3.0;
-
-            const textLabels=data.residue_nos.map((r, idx)=> {
-                    const s1=data.results[0].scores[idx];
-                    const s2=data.results[1]?.scores[idx] || 0;
-                    const s3=data.results[2]?.scores[idx] || 0;
-                    const dist=Math.sqrt(s1 * s1 + s2 * s2 + s3 * s3);
-
-                    return dist > threshold ? `Res $ {
-                        r
-                    }
-
-                    ` : '';
-                });
-
-            const traces=[ {
-
-                x: data.results[0].scores,
-                y: data.results[1].scores,
-                z: data.results[2].scores,
-                mode: 'markers+text',
-                type: 'scatter3d',
-                text: textLabels,
-                textposition: 'top center',
-                marker: {
-                    size: 4,
-                        color: textLabels.map(l=> l ? '#fb7185' : '#38bdf8'),
-                        opacity: 0.8
-                }
-            }
-
-            ];
-
-            const layout= {
-
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                scene: {
-                    xaxis: {
-                        title: 'PC1', gridcolor: '#334155'
-                    }
-
-                    ,
-                    yaxis: {
-                        title: 'PC2', gridcolor: '#334155'
-                    }
-
-                    ,
-                    zaxis: {
-                        title: 'PC3', gridcolor: '#334155'
-                    }
-
-                    ,
-                    bgcolor: 'rgba(0,0,0,0)'
-                }
-
-                ,
-                margin: {
-                    t: 0, b: 0, l: 0, r: 0
-                }
-
-                ,
-                font: {
-                    color: '#94a3b8', size: 10
-                }
-            }
-
-            ;
-            Plotly.newPlot('pca-3d-plot', traces, layout);
-        }
-
-        function renderKdFits(data) {
-            const container=document.getElementById('kd-plots');
-            container.innerHTML='';
-
-            if (data.result_2d || data.result_h || data.result_n) {
-                render3WayComparison(data);
-                return;
-            }
-        }
-
-        function render3WayComparison(data) {
-            const container=document.getElementById('kd-plots');
-            container.innerHTML='';
-
-            if (data.result_2d) {
-                container.appendChild(createColumn('HSQC PCA', data.result_2d, data.result_2d.concentrations || data.concentrations || []));
-            }
-
-            if (data.result_h) {
-                container.appendChild(createColumn('1H Projection', data.result_h, data.result_h.concentrations || data.concentrations || []));
-            }
-
-            if (data.result_n) {
-                container.appendChild(createColumn('15N Projection', data.result_n, data.result_n.concentrations || data.concentrations || []));
-            }
-        }
-
-        function formatDualStats(label, fit, variance) {
-            if ( !fit) return `<div class="text-xs text-slate-500">$ {
-                label
-            }
-
-            : No data</div>`;
-            const trad=fit.traditional;
-            const univ=fit.universal;
-
-            const tradStr=trad && trad.success ? `$ {
-                trad.kd>1000 ? trad.kd.toExponential(1): trad.kd.toFixed(1)
-            }
-
-            ± $ {
-                trad.kd_err>1000 ? trad.kd_err.toExponential(1): trad.kd_err.toFixed(1)
-            }
-
-            ` : 'Failed';
-
-            if ( !univ || !univ.success) {
-                return ` <div class="bg-slate-50/50 rounded p-2 text-[10px] space-y-1"><div class="font-bold text-slate-700">$ {
-                    label
-                }
-
-                ($ {
-                        (variance * 100).toFixed(1)
-                    }
-
-                    %)</div><div><span class="text-emerald-400">Binding Kd:</span><span class="text-slate-700 font-mono">$ {
-                    tradStr
-                }
-
-                </span></div></div>`;
-            }
-
-            const univKdStr=`$ {
-                univ.kd>1000 ? univ.kd.toExponential(1): univ.kd.toFixed(1)
-            }
-
-            ± $ {
-                univ.kd_err>1000 ? univ.kd_err.toExponential(1): univ.kd_err.toFixed(1)
-            }
-
-            `;
-
-            return ` <div class="bg-slate-50/50 rounded p-2 text-[10px] space-y-1"><div class="flex justify-between items-center font-bold text-slate-700 border-b border-slate-200 pb-1 mb-1"><span>$ {
-                label
-            }
-
-            </span><span class="text-indigo-400">Contrib: $ {
-                (variance * 100).toFixed(1)
-            }
-
-            %</span><span class="text-xs text-slate-500">$ {
-                univ.regime
-            }
-
-            </span></div><div class="grid grid-cols-2 gap-1 text-[9px] border-b border-slate-200 pb-1"><div><span class="text-emerald-400">Binding:</span><span class="text-slate-700 font-mono">$ {
-                tradStr
-            }
-
-            </span></div><div><span class="text-teal-400">Universal:</span><span class="text-slate-700 font-mono">$ {
-                univKdStr
-            }
-
-            </span></div></div><div class="grid grid-cols-2 gap-1 text-[9px]"><div><span class="text-slate-500">|B|/|C|:</span><span class="text-slate-600 font-mono">$ {
-                univ.regime_ratio.toFixed(2)
-            }
-
-            </span></div></div><div class="grid grid-cols-3 gap-1 text-[9px] border-t border-slate-200 pt-1"><div><span class="text-slate-500">A:</span><span class="text-slate-600 font-mono">$ {
-                univ.A.toFixed(1)
-            }
-
-            </span></div><div><span class="text-blue-400">B:</span><span class="text-slate-600 font-mono">$ {
-                univ.B.toFixed(1)
-            }
-
-            </span></div><div><span class="text-amber-400">C:</span><span class="text-slate-600 font-mono">$ {
-                univ.C.toFixed(1)
-            }
-
-            </span></div></div></div>`;
-        }
-
-        function plotDualFit(domId, xData, yData, fit, title, color) {
-            const dataTrace= {
-
-                x: xData,
-                y: yData,
-                mode: 'markers',
-                marker: {
-
-                    color: color,
-                    size: 8,
-                    line: {
-                        color: 'white', width: 1
-                    }
-                }
-
-                ,
-                name: 'Data'
-            }
-
-            ;
-            const traces=[dataTrace];
-
-            if (fit && fit.traditional && fit.traditional.success && fit.traditional.fit_y) {
-                traces.push({
-
-                    x: fit.traditional.fit_x, y: fit.traditional.fit_y, mode: 'lines',
-                    line: {
-                        color: '#10b981', width: 2, dash: 'dash'
-                    }
-
-                    ,
-                    name: 'Binding'
-                });
-        }
-
-        if (fit && fit.universal && fit.universal.success && fit.universal.fit_y) {
-            const univ=fit.universal;
-
-            traces.push({
-
-                x: univ.fit_x, y: univ.fit_y, mode: 'lines',
-                line: {
-                    color: color, width: 2.5, dash: 'dot'
-                }
-
-                ,
-                name: 'Universal'
-            });
-
-        if (univ.f_extremum !==null && univ.f_extremum > 0.1 && univ.f_extremum < 0.9) {
-            const c_ext=univ.kd * univ.f_extremum / (1 - univ.f_extremum);
-            const maxConc=Math.max(...xData);
-
-            if (c_ext < maxConc * 1.5) {
-                const idx=univ.fit_x.findIndex(x=> x >=c_ext);
-
-                if (idx > 0) {
-                    traces.push({
-
-                        x: [c_ext], y: [univ.fit_y[idx]], mode: 'markers',
-                        marker: {
-                            color: '#a855f7', size: 10, symbol: 'diamond'
-                        }
-
-                        ,
-                        name: `Ext (f=$ {
-                                univ.f_extremum.toFixed(2)
-                            })`
-                    });
-            }
-        }
-        }
-        }
-
-        const layout= {
-            title: {
-
-                text: title,
-                font: {
-                    size: 12, color: '#e2e8f0'
-                }
-            }
-
-            ,
-            paper_bgcolor: 'rgba(0,0,0,0)',
-            plot_bgcolor: 'rgba(0,0,0,0)',
-            font: {
-                color: '#94a3b8', size: 10
-            }
-
-            ,
-            xaxis: {
-                title: 'Ligand (uM)', gridcolor: '#334155'
-            }
-
-            ,
-            yaxis: {
-                title: 'Score', gridcolor: '#334155'
-            }
-
-            ,
-            margin: {
-                t: 30, b: 30, l: 40, r: 10
-            }
-
-            ,
-            showlegend: false
-        }
-
-        ;
-        Plotly.newPlot(domId, traces, layout);
-        }
-
-        function createColumn(title, result, concs) {
-            const col=document.createElement('div');
-            col.className='glass p-4 rounded-2xl flex flex-col space-y-4';
-
-            col.innerHTML=`<h3 class="text-lg font-bold text-center gradient-text mb-2">$ {
-                title
-            }
-
-            </h3>`;
-
-            if ( !result.success) {
-                col.innerHTML+=`<div class="text-red-400 text-center">Analysis Failed: $ {
-                    result.error
-                }
-
-                </div>`;
-                return col;
-            }
-
-            const pc1Div=document.createElement('div');
-
-            pc1Div.id=`plot-$ {
-                title.replace(/\s+/g, '')
-            }
-
-            -pc1`;
-            pc1Div.className='w-full h-[250px] mb-2';
-            col.appendChild(pc1Div);
-            col.appendChild(createStatsDiv(formatDualStats('PC1', result.pc1_fit, result.variance[0])));
-            const pc2Div=document.createElement('div');
-
-            pc2Div.id=`plot-$ {
-                title.replace(/\s+/g, '')
-            }
-
-            -pc2`;
-            pc2Div.className='w-full h-[180px] border-t border-slate-200/50 pt-2';
-            col.appendChild(pc2Div);
-            col.appendChild(createStatsDiv(formatDualStats('PC2', result.pc2_fit, result.variance[1])));
-            const pc3Div=document.createElement('div');
-
-            pc3Div.id=`plot-$ {
-                title.replace(/\s+/g, '')
-            }
-
-            -pc3`;
-            pc3Div.className='w-full h-[180px] border-t border-slate-200/50 pt-2';
-            col.appendChild(pc3Div);
-            col.appendChild(createStatsDiv(formatDualStats('PC3', result.pc3_fit, result.variance[2])));
-
-            setTimeout(()=> {
-                    plotDualFit(pc1Div.id, concs, result.scores, result.pc1_fit, `PC1 ($ {
-                                (result.variance[0] * 100).toFixed(1)
-                            }
-
-                            %)`, title.includes('2D') ? '#38bdf8' : (title.includes('1H') ? '#2dd4bf' : '#34d399'));
-
-                    plotDualFit(pc2Div.id, concs, result.pc2_scores, result.pc2_fit, `PC2 ($ {
-                                (result.variance[1] * 100).toFixed(1)
-                            }
-
-                            %)`, title.includes('2D') ? '#0ea5e9' : (title.includes('1H') ? '#14b8a6' : '#10b981'));
-
-                    plotDualFit(pc3Div.id, concs, result.pc3_scores, result.pc3_fit, `PC3 ($ {
-                                (result.variance[2] * 100).toFixed(1)
-                            }
-
-                            %)`, title.includes('2D') ? '#0284c7' : (title.includes('1H') ? '#0d9488' : '#059669'));
-                }
-
-                , 0);
-            return col;
-        }
-
-        function createStatsDiv(htmlContent) {
-            const div=document.createElement('div');
-            div.innerHTML=htmlContent;
-            return div;
-        }
-
-        let stage;
-        let currentOutliers=[];
-        let firstResidueNo=null;
-
-        function handlePDBDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.target.closest('label').classList.remove('border-indigo-500');
-            const file=e.dataTransfer.files[0];
-            processPDBFile(file);
-        }
-
-        function handlePDBUpload(event) {
-            const file=event.target.files[0];
-            processPDBFile(file);
-        }
-
-        function processPDBFile(file) {
-            if ( !file) return;
-            document.getElementById('pdb-section').classList.remove('hidden');
-            const nameDisplay=document.getElementById('pdb-file-name');
-            if (nameDisplay) nameDisplay.innerText=file.name;
-
-            if (typeof NGL==='undefined') {
-                alert("NGL Library not loaded. Please check internet connection or refresh.");
-                console.error("NGL is undefined");
-                return;
-            }
-
-            const ext=file.name.split('.').pop().toLowerCase();
-            if ( !['pdb', 'cif', 'ent'].includes(ext)) return alert("Unsupported format. Use .pdb or .cif");
-
-            try {
-                if ( !stage) {
-                    stage=new NGL.Stage("ngl-viewport", {
-                        backgroundColor: "white"
-                    });
-
-                window.addEventListener("resize", function () {
-                        stage.handleResize();
-                    });
-            }
-
-            else {
-                stage.handleResize();
-            }
-
-            stage.removeAllComponents();
-            const reader=new FileReader();
-
-            reader.onload=function (e) {
-                try {
-                    const blob=new Blob([e.target.result], {
-                        type: 'text/plain'
-                    });
-
-                stage.loadFile(blob, {
-                    ext: ext
-
-                }).then(function (component) {
-                    applyOutlierColoring(component);
-                    component.autoView();
-                    document.getElementById('pdb-placeholder').style.display='none';
-                    console.log('Structure Loaded Successfully');
-
-                }).catch(err=> {
-                    console.error('NGL Load Error:', err);
-                    alert('Error rendering structure: ' + err);
-                    document.getElementById('pdb-placeholder').innerText='Error loading structure';
-                });
-        }
-
-        catch (err) {
-            console.error("Error in load sequence:", err);
-            alert("Critical error loading file: " + err);
-        }
-        }
-
-        ;
-        reader.readAsText(file);
-        }
-
-        catch (err) {
-            console.error("NGL Initialization Error:", err);
-            alert("Failed to initialize 3D Viewer: " + err);
-        }
-        }
-
-        const AA_MAP= {
-            "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
-                "GLU": "E", "GLN": "Q", "GLY": "G", "HIS": "H", "ILE": "I",
-                "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
-                "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"
-        }
-
-        ;
-
-        function applyOutlierColoring(component) {
-            component.removeAllRepresentations();
-            const offset=1 - (firstResidueNo || 1);
-            let selectionString="";
-            let schemeId="uniform";
-
-            if (currentOutliers && currentOutliers.length > 0) {
-                selectionString=currentOutliers.map(r=> {
-                        const mappedRes=parseInt(r) + offset;
-                        return mappedRes;
-                    }).join(" or ");
-            }
-
-            if (selectionString) {
-                const selectionObj=new NGL.Selection(selectionString);
-
-                component.structure.eachResidue(function (rp) {
-                        const upper=rp.resname.toUpperCase();
-
-                        if (AA_MAP[upper]) {
-                            rp.resname=AA_MAP[upper];
-                        }
-                    }
-
-                    , selectionObj);
-                schemeId=NGL.ColormakerRegistry.addSelectionScheme([ ["red", selectionString],
-                    ["lightgray", "*"]], "outlierScheme_" + Math.random());
-
-                component.addRepresentation("cartoon", {
-                    color: schemeId
-                });
-
-            component.addRepresentation("label", {
-                sele: "(" + selectionString + ") and .CA",
-                color: "black",
-                scale: 17.5, // Increased size 5x
-                labelType: "format",
-                labelFormat: "%(resname)s%(resno)s" // 1-letter Format
-            });
-        }
-
-        else {
-            component.addRepresentation("cartoon", {
-                color: "lightgray"
-            });
-        }
-        }
-
-        function handleToolbar(action) {
-            if ( !stage) return;
-            if (action==='reset') stage.autoView();
-
-            if (action==='spin') {
-                if (stage.spinAnimation && !stage.spinAnimation.paused) {
-                    stage.setSpin(false);
-                }
-
-                else {
-                    stage.setSpin(true);
-                }
-            }
-
-            if (action==='screenshot') {
-                stage.makeImage({
-                    factor: 1, antialias: true, trim: false, transparent: false
-
-                }).then(function (blob) {
-                    NGL.download(blob, "structure_view.png");
-                });
-        }
-        }
-
-        function renderLegacyOrPicked(data, container) {
-            if (data.residue_nos && data.residue_nos.length > 0) {
-                firstResidueNo=data.residue_nos[0];
-                const pdbSec=document.getElementById('pdb-section');
-
-                if (pdbSec) {
-                    pdbSec.classList.remove('hidden');
-                }
-            }
-
-            container.className='grid grid-cols-3 gap-2';
-
-            data.results.forEach((res, i)=> {
-                    const div=document.createElement('div');
-                    div.className='glass p-6 rounded-2xl flex flex-col space-y-4';
-
-                    div.id=`legacy-plot-$ {
-                        i
-                    }
-
-                    `;
-
-                    div.innerHTML=`<h3 class="text-lg font-bold text-slate-700" >PC$ {
-                        i + 1
-                    }
-
-                    Analysis</h3><div id="plot-legacy-${i}" class="h-[250px]" ></div>`;
-                    container.appendChild(div);
-
-                    const trace= {
-                        x: data.residue_nos || [], y: res.scores, type: 'bar', marker: {
-                            color: '#38bdf8'
-                        }
-                    }
-
-                    ;
-
-                    if (data.residue_nos) {
-                        Plotly.newPlot(`plot-legacy-$ {
-                                i
-                            }
-
-                            `, [trace], {
-
-                            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-                            margin: {
-                                t: 30, b: 40, l: 40, r: 10
-                            }
-
-                            ,
-                            font: {
-                                color: '#94a3b8', size: 10
-                            }
-
-                            ,
-                            title: {
-                                text: `PC$ {
-                                    i + 1
-                                }
-
-                                Loads`, font: {
-                                    size: 12
-                                }
-                            }
-
-                            ,
-                            xaxis: {
-                                title: 'Residue No', automargin: true
-                            }
-
-                            ,
-                            yaxis: {
-                                title: 'Score', automargin: true, autorange: true
-                            }
-                        });
+            const raw = document.getElementById('batch-concs').value;
+            const vals = raw.split(/[\s,]+/).filter(v => v !== '').map(v => parseFloat(v));
+            let vIdx = 0;
+            experiments.forEach((exp, idx) => {
+                const cb = document.getElementById(`check-${idx}`);
+                const inp = document.getElementById(`conc-${idx}`);
+                if (vIdx < vals.length) {
+                    inp.value = vals[vIdx++];
+                    cb.checked = true;
                 }
             });
         }
+    </script>
+</body>
 
-        </script><div class="fixed bottom-4 right-4 text-[10px] text-slate-500 font-mono opacity-50 hover:opacity-100 transition-opacity">V1.0 | 2026-01-21 </div></body></html>
+</html>

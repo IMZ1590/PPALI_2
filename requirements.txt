@@ -4,5 +4,7 @@ python-multipart
 numpy
 scipy
 scikit-learn
-pandas
-openpyxl
+nmrglue
+plotly
+gunicorn
+uvicorn[standard]
