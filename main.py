@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 import uvicorn
 
-app = FastAPI(title="PPALI Suite Hub")
+app = FastAPI(title="PALI Suite Hub")
 
 # Ensure packages directory exists
 PACKAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "packages")
@@ -12,9 +12,9 @@ PACKAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "package
 @app.get("/download/{os_type}")
 async def download_package(os_type: str):
     file_map = {
-        "windows": "PPALI_2_Windows.zip",
-        "mac": "PPALI_2_Mac.zip",
-        "linux": "PPALI_2_Linux.zip"
+        "windows": "PALI_2_Windows.zip",
+        "mac": "PALI_2_Mac.zip",
+        "linux": "PALI_2_Linux.zip"
     }
     
     file_name = file_map.get(os_type.lower())
@@ -26,7 +26,7 @@ async def download_package(os_type: str):
     if os.path.exists(file_path):
         return FileResponse(
             path=file_path,
-            filename="PPALI2.zip", # Force rename to PPALI2.zip
+            filename="PALI2.zip", # Force rename to PALI2.zip
             media_type='application/zip'
         )
     else:
